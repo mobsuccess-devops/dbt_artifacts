@@ -1,0 +1,35 @@
+# DO NOT EDIT: BEGIN
+# This snippet has been inserted automatically by mobsuccessbot, do not edit!
+# If changes are needed, update the action mobsuccess in
+# https://github.com/mobsuccess-devops/github-mobsuccess-policy
+name: Mobsuccess Compliance
+
+on:
+  merge_group:
+    types:
+      - checks_requested
+
+  issue_comment:
+    types:
+      - created
+      - edited
+
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+jobs:
+  MobsuccessPRCompliance:
+    name: "Mobsuccess PR Compliance"
+    runs-on: ubuntu-20.04
+    timeout-minutes: 2
+    steps:
+      - uses: mobsuccess-devops/github-actions-mobsuccess@master
+        with:
+          github-token: ${{ github.token }}
+          amplify-uri: ${{ secrets.AWS_AMPLIFY_URI }}${{ vars.AWS_AMPLIFY_URI }}
+          storybook-amplify-uri: ${{ secrets.AWS_STORYBOOK_AMPLIFY_URI }}${{ vars.AWS_STORYBOOK_AMPLIFY_URI }}
+          action: "validate-pr"
+# DO NOT EDIT: END
