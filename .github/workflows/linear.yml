@@ -1,0 +1,54 @@
+# DO NOT EDIT: BEGIN
+# This snippet has been inserted automatically by mobsuccessbot, do not edit!
+# If changes are needed, update the action linear in
+# https://github.com/mobsuccess-devops/github-mobsuccess-policy
+name: Linear
+
+on:
+  merge_group:
+    types:
+      - checks_requested
+
+  pull_request:
+    types:
+      - assigned
+      - unassigned
+      - review_requested
+      - review_request_removed
+      - opened
+      - synchronize
+      - closed
+      - edited
+      - converted_to_draft
+      - ready_for_review
+
+jobs:
+  Linear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: mobsuccess-devops/github-actions-linear@master
+        id: check-pr-title-compliance
+        if: github.event.pull_request.draft == false
+        with:
+          action: check-pr-title-compliance
+          linearApiKey: ${{ secrets.LINEAR_API_KEY }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: mobsuccess-devops/github-actions-linear@master
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'closed')
+        with:
+          action: create-linear-issue-from-bot-pr
+          linearApiKey: ${{ secrets.LINEAR_API_KEY }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: mobsuccess-devops/github-actions-linear@master
+        with:
+          action: check-linear-state
+          linearApiKey: ${{ secrets.LINEAR_API_KEY }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+# DO NOT EDIT: END
