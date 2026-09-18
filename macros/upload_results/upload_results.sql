@@ -25,26 +25,46 @@
                 {% set upload_limit = 300 if target.type == 'bigquery' else 5000 %}
             {% endif %}
 
-            {# Loop through each chunk in turn #}
-            {% for i in range(0, objects | length, upload_limit) -%}
+            {# Also cap each chunk by rendered SQL size: Athena rejects query strings over 262144 characters #}
+            {% set max_query_chars = var('dbt_artifacts_max_query_chars', 200000) %}
+            {% set ns = namespace(batch=[], size=0) %}
 
-                {# Get just the objects to load on this loop #}
-                {% set content = dbt_artifacts.get_table_content_values(dataset, objects[i: i + upload_limit]) %}
+            {% for object in objects -%}
 
-                {# Insert the content into the metadata table #}
-                {{ dbt_artifacts.insert_into_metadata_table(
-                    dataset=dataset,
-                    fields=dbt_artifacts.get_column_name_list(dataset),
-                    content=content
-                    )
-                }}
+                {% set object_size = dbt_artifacts.get_table_content_values(dataset, [object]) | length %}
 
-            {# Loop the next 'chunk' #}
-            {% endfor %}
+                {# Flush the current chunk before it goes over the row or size limit #}
+                {% if ns.batch and (ns.batch | length >= upload_limit or ns.size + object_size > max_query_chars) %}
+                    {{ dbt_artifacts.upload_results_chunk(dataset, ns.batch) }}
+                    {% set ns.batch = [] %}
+                    {% set ns.size = 0 %}
+                {% endif %}
+
+                {% set ns.batch = ns.batch + [object] %}
+                {% set ns.size = ns.size + object_size %}
+
+            {%- endfor %}
+
+            {% if ns.batch %}
+                {{ dbt_artifacts.upload_results_chunk(dataset, ns.batch) }}
+            {% endif %}
 
         {# Loop the next 'dataset' #}
         {% endfor %}
 
     {% endif %}
+
+{%- endmacro %}
+
+
+{% macro upload_results_chunk(dataset, objects) -%}
+
+    {# Insert the content into the metadata table #}
+    {{ dbt_artifacts.insert_into_metadata_table(
+        dataset=dataset,
+        fields=dbt_artifacts.get_column_name_list(dataset),
+        content=dbt_artifacts.get_table_content_values(dataset, objects)
+        )
+    }}
 
 {%- endmacro %}
