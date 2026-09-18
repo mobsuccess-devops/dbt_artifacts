@@ -26,7 +26,7 @@
             {% endif %}
 
             {# Also cap each chunk by rendered SQL size: Athena rejects query strings over 262144 characters #}
-            {% set max_query_chars = var('dbt_artifacts_max_query_chars', 200000) %}
+            {% set max_query_chars = var('dbt_artifacts_max_query_chars', 200000) | int(200000) %}
             {% set ns = namespace(batch=[], size=0) %}
 
             {% for object in objects -%}
